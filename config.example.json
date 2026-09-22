@@ -1,0 +1,10 @@
+{
+  "rcon_ip": "127.0.0.1",
+  "rcon_port": 25575,
+  "rcon_password": "在这里填写你的RCON密码",
+  "log_path": "/你的/MC服务器目录/logs/latest.log",
+  "server_name": "你的服务器名",
+  "width": 1792,
+  "height": 1024,
+  "max_players": 100
+}
