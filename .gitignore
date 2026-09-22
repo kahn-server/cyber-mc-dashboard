@@ -1,7 +1,7 @@
-# 敏感配置（含 RCON 密码）——绝不提交
+# Sensitive config (contains RCON password) - never commit
 config.json
 
-# 运行时产物
+# Runtime artifacts
 *.log
 shots/
 __pycache__/
@@ -9,7 +9,7 @@ __pycache__/
 .venv/
 venv/
 
-# 系统文件
+# System files
 .DS_Store
 *.swp
 *~
