@@ -100,7 +100,7 @@ MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
 
 ## 安全说明
 
-- `config.json` 包含 **RCON 密码**，已被 `.gitignore` 排除，**请勿提交到仓库**。
+- `config.json` 包含 **RCON 密码**，属于敏感信息——请勿将你的 `config.json` 提交到公开仓库。
 - 代码中的 RCON 密码默认值为空，必须通过 `config.json` 或环境变量提供。
 
 ## License

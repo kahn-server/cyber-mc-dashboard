@@ -100,7 +100,7 @@ MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
 
 ## Security Notes
 
-- `config.json` contains the **RCON password** and is excluded via `.gitignore` — **never commit it**.
+- `config.json` contains the **RCON password** — sensitive data. Do not commit your `config.json` to a public repository.
 - The RCON password default in the code is empty; it must be supplied via `config.json` or environment variables.
 
 ## License
