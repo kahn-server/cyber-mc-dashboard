@@ -1,115 +1,127 @@
 # Cyberpunk MC Dashboard
 
-赛博朋克风格的 Minecraft 服务器监控终端（Python / pygame 全屏渲染）。
+> A cyberpunk-styled **Minecraft server monitoring terminal** — fullscreen neon HUD rendered in Python/pygame, with real RCON data, CRT scanlines and live log feed.
 
-![类型](https://img.shields.io/badge/type-monitor-dashboard-ff2d95)
+**English** | [简体中文](README_cn.md)
+
+![Type](https://img.shields.io/badge/type-monitor-dashboard-ff2d95)
 ![Python](https://img.shields.io/badge/python-3.8+-00d4ff)
+![RCON](https://img.shields.io/badge/rcon-native--socket-00d4ff)
+![License](https://img.shields.io/badge/license-MIT-ff2d95)
 
-## 功能
+**Highlights**
 
-- **全屏霓虹仪表盘**：以 1792×1024 为基准，按实际屏幕分辨率等比计算坐标，自动适配 16:9 / 16:10 / 4:3 及任意特种比例。
-- **赛博朋克视觉**：霓虹渐变面板、多层外发光、渐变发光环形仪表、刻度动画、发光大标题、CRT 扫描线、数据雨、移动扫描束、径向光晕背景、噪点。
-- **真实数据采集**（非演示模拟）：
-  - 系统负载 / 内存 / CPU（psutil）
-  - MC 在线人数 / 玩家列表（**原生 RCON**，纯 socket 手搓客户端，不依赖 mcrcon）
-  - 服务器状态（Mojang API）
-  - 日志流（实时读取 MC `latest.log`）
-- **演示模式**：无 RCON 时可设 `MC_DEMO=1` 模拟在线数据，方便展示。
+- 🌆 Fullscreen neon cyberpunk HUD (auto-scales to any resolution, incl. 16:9 / 16:10 / 4:3 / ultra-tall)
+- 📊 Real data, not simulation: system load / CPU / RAM, MC players (native RCON), server status, live log tail
+- 🎛️ Demo mode (`MC_DEMO=1`) for showcasing without RCON
+- 🖥️ Headless-ready: `dashboard.sh start` brings up Xvfb + x11vnc + websockify (CPU affinity auto-assigned)
+- 🧩 Companion screen for [MCPanel](https://github.com/kahn-server/mc-panel) web panel (in-page VNC)
 
-## 目录结构
+## Features
+
+- **Fullscreen neon dashboard**: designed at 1792×1024 baseline, coordinates scale proportionally to your actual screen resolution — auto-adapts to 16:9 / 16:10 / 4:3 and arbitrary aspect ratios.
+- **Cyberpunk visuals**: neon gradient panels, multi-layer glow, gradient ring gauges, tick animations, glowing titles, CRT scanlines, digital rain, moving scan beam, radial glow background, noise.
+- **Real data collection** (not simulated):
+  - System load / memory / CPU (psutil)
+  - MC online players / player list (**native RCON**, hand-written pure-socket client, no mcrcon dependency)
+  - Server status (Mojang API)
+  - Log stream (live tail of MC `latest.log`)
+- **Demo mode**: set `MC_DEMO=1` to simulate online data without RCON, handy for showcasing.
+
+## Directory Layout
 
 ```
 .
-├── dashboard.py          # 主程序（单文件）
-├── dashboard.sh          # 启动/停止脚本（start|stop）
-├── config.example.json   # 配置模板（复制为 config.json 使用）
-├── config.json           # 你的实际配置（含密码，请勿提交到公开仓库）
-└── shots/                # 截图输出目录（运行时生成）
+├── dashboard.py          # Main program (single file)
+├── dashboard.sh          # Start/stop script (start|stop)
+├── config.example.json   # Config template (copy to config.json)
+├── config.json           # Your real config (contains password — do NOT commit to a public repo)
+└── shots/                # Screenshot output (runtime)
 ```
 
-## 安装
+## Installation
 
-**系统依赖（APT）**——无显示器环境需要虚拟屏与 VNC 转发（`dashboard.sh` 依赖）：
+**System dependencies (APT)** — headless boxes need a virtual display and VNC forwarding (`dashboard.sh` relies on them):
 
 ```bash
 sudo apt-get install -y xvfb x11vnc python3 python3-pip
 ```
 
-**Python 依赖**：
+**Python dependencies**:
 
 ```bash
 pip install pygame psutil requests
 ```
 
-> 不需要 mcrcon：项目内置纯 socket 实现的 `RCONClient`（部分发行版 mcrcon 用 `signal.alarm` 实现超时，在子线程会抛异常，故自研）。
+> No mcrcon needed: the project ships a pure-socket `RCONClient` (some mcrcon builds use `signal.alarm` for timeouts, which throws in worker threads, hence the custom client).
 
-## 配置
+## Configuration
 
-### 方式一：config.json（推荐）
+### Option 1: config.json (recommended)
 
 ```bash
 cp config.example.json config.json
 ```
 
-编辑 `config.json`：
+Edit `config.json`:
 
 ```json
 {
   "rcon_ip": "127.0.0.1",
   "rcon_port": 25575,
-  "rcon_password": "你的RCON密码",
-  "log_path": "/你的/MC服务器目录/logs/latest.log",
-  "server_name": "你的服务器名",
+  "rcon_password": "YOUR_RCON_PASSWORD",
+  "log_path": "/YOUR/MC/dir/logs/latest.log",
+  "server_name": "Your Server Name",
   "width": 1792,
   "height": 1024,
   "max_players": 100
 }
 ```
 
-### 方式二：环境变量（优先级高于 config.json）
+### Option 2: Environment variables (higher priority than config.json)
 
-| 变量 | 说明 | 默认值 |
+| Variable | Description | Default |
 |---|---|---|
-| `MC_RCON_IP` | RCON 地址 | `127.0.0.1` |
-| `MC_RCON_PORT` | RCON 端口 | `25575` |
-| `MC_RCON_PASSWORD` | RCON 密码 | 空（必须配置） |
-| `MC_LOG_PATH` | MC 日志文件路径 | 空 |
-| `MC_SERVER_NAME` | 面板标题 | `Cyberpunk MC Dashboard` |
-| `MC_WIDTH` / `MC_HEIGHT` | 窗口尺寸 | `1792` / `1024` |
-| `MC_MAX_PLAYERS` | 服务器最大人数 | `20` |
-| `MC_DEMO` | 置 `1` 进入演示模式 | 空 |
-| `MC_WINDOWED` | 置 `1` 窗口模式（否则全屏） | 空 |
+| `MC_RCON_IP` | RCON address | `127.0.0.1` |
+| `MC_RCON_PORT` | RCON port | `25575` |
+| `MC_RCON_PASSWORD` | RCON password | empty (required) |
+| `MC_LOG_PATH` | MC log file path | empty |
+| `MC_SERVER_NAME` | Dashboard title | `Cyberpunk MC Dashboard` |
+| `MC_WIDTH` / `MC_HEIGHT` | Window size | `1792` / `1024` |
+| `MC_MAX_PLAYERS` | Server max players | `20` |
+| `MC_DEMO` | `1` for demo mode | empty |
+| `MC_WINDOWED` | `1` for windowed mode (else fullscreen) | empty |
 
-## 运行
+## Run
 
 ```bash
-# 全屏运行
+# Fullscreen
 python3 dashboard.py
 
-# 窗口模式
+# Windowed
 MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
 
-# 或使用启动脚本（带虚拟屏 + VNC + 网页终端，无显示器环境）
-./dashboard.sh start     # 启动
-./dashboard.sh stop      # 停止
+# Or via the start script (virtual display + VNC + web terminal, for headless boxes)
+./dashboard.sh start     # start
+./dashboard.sh stop      # stop
 ```
 
-> 启动脚本自动检测 CPU 核心数分配亲和（`DASH_CPU_AFFINITY` 可覆盖），自动探测 websockify；`DASH_DIR / PANEL_DIR / DASH_VNC_PASS / WEBSOCKIFY_BIN / DISPLAY_NUM` 等均可用环境变量覆盖，无需改脚本。
+> The start script auto-detects CPU core count for affinity (`DASH_CPU_AFFINITY` overrides it) and auto-probes websockify; `DASH_DIR / PANEL_DIR / DASH_VNC_PASS / WEBSOCKIFY_BIN / DISPLAY_NUM` are all overridable via environment variables — no script editing needed.
 
-## 快捷键
+## Hotkeys
 
-| 键 | 功能 |
+| Key | Action |
 |---|---|
-| `ESC` | 退出 |
-| `T` | 主题循环：自动 → 白天 → 黑夜 |
-| `↑ / ↓` | 日志手动翻页 |
-| `R` | 日志回到最新（LIVE） |
-| `S` | 截图保存到 `shots/` |
+| `ESC` | Quit |
+| `T` | Theme cycle: auto → day → night |
+| `↑ / ↓` | Manual log paging |
+| `R` | Jump log back to live (LIVE) |
+| `S` | Save screenshot to `shots/` |
 
-## 安全说明
+## Security Notes
 
-- `config.json` 包含 **RCON 密码**，属于敏感信息——请勿将你的 `config.json` 提交到公开仓库。
-- 代码中的 RCON 密码默认值为空，必须通过 `config.json` 或环境变量提供。
+- `config.json` contains the **RCON password** — sensitive data. Do not commit your `config.json` to a public repository.
+- The RCON password default in the code is empty; it must be supplied via `config.json` or environment variables.
 
 ## License
 
