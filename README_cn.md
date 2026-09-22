@@ -22,12 +22,16 @@
 
 ```
 .
-├── dashboard.py          # 主程序（单文件）
-├── dashboard.sh          # 启动/停止脚本（start|stop）
+├── dashboard.py          # 主程序（英文版，供海外用户）
+├── dashboard_cn.py       # 主程序（中文版，国内用户请使用这个）
+├── dashboard.sh          # 启动/停止脚本（英文版，启动 dashboard.py）
+├── dashboard_cn.sh       # 启动/停止脚本（中文版，启动 dashboard_cn.py）
 ├── config.example.json   # 配置模板（复制为 config.json 使用）
 ├── config.json           # 你的实际配置（含密码，请勿提交到公开仓库）
 └── shots/                # 截图输出目录（运行时生成）
 ```
+
+> ⚠️ **中文用户请使用 `dashboard_cn.py` + `dashboard_cn.sh`**（界面与提示均为中文）；英文版仅供海外用户。
 
 ## 安装
 
@@ -82,18 +86,18 @@ cp config.example.json config.json
 | `MC_DEMO` | 置 `1` 进入演示模式 | 空 |
 | `MC_WINDOWED` | 置 `1` 窗口模式（否则全屏） | 空 |
 
-## 运行
+## 运行（中文版）
 
 ```bash
-# 全屏运行
-python3 dashboard.py
+# 全屏运行（中文版）
+python3 dashboard_cn.py
 
 # 窗口模式
-MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
+MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard_cn.py
 
 # 或使用启动脚本（带虚拟屏 + VNC + 网页终端，无显示器环境）
-./dashboard.sh start     # 启动
-./dashboard.sh stop      # 停止
+./dashboard_cn.sh start     # 启动
+./dashboard_cn.sh stop      # 停止
 ```
 
 > 启动脚本自动检测 CPU 核心数分配亲和（`DASH_CPU_AFFINITY` 可覆盖），自动探测 websockify；`DASH_DIR / PANEL_DIR / DASH_VNC_PASS / WEBSOCKIFY_BIN / DISPLAY_NUM` 等均可用环境变量覆盖，无需改脚本。

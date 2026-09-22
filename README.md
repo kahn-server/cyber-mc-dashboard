@@ -32,12 +32,16 @@
 
 ```
 .
-├── dashboard.py          # Main program (single file)
-├── dashboard.sh          # Start/stop script (start|stop)
+├── dashboard.py          # Main program (English version)
+├── dashboard_cn.py       # Main program (中文版，见 README_cn.md)
+├── dashboard.sh          # Start/stop script, launches dashboard.py (English)
+├── dashboard_cn.sh       # Start/stop script for 中文版 (launches dashboard_cn.py)
 ├── config.example.json   # Config template (copy to config.json)
 ├── config.json           # Your real config (contains password — do NOT commit to a public repo)
 └── shots/                # Screenshot output (runtime)
 ```
+
+> 🇨🇳 **Chinese users**: use `dashboard_cn.py` + `dashboard_cn.sh` — see [README_cn.md](README_cn.md) for Chinese instructions.
 
 ## Installation
 

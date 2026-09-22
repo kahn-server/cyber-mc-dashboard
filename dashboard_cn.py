@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Cyberpunk MC Server Dashboard — cyberpunk-styled Minecraft server monitoring terminal (v3 flagship)
+Cyberpunk MC Server Dashboard —— 赛博朋克 MC 服务器监控终端（v3 旗舰版）
 ========================================================================
-· Layout: based on a 1792x1024 reference, coordinates scale proportionally to your real screen resolution,
-  auto-adapts to 16:9 / 16:10 / 4:3 and any unusual ratio (falls back to 16:9 stretch).
-· Rendering: neon gradient panels / multi-layer glow / gradient ring gauges / tick animations /
-  glowing titles / CRT scanlines / digital rain / moving scan beam / radial glow background / noise.
-· Data: all real (psutil + RCON + Mojang API + log file).
+· 布局：以 1792x1024 参考图为基准，按实际屏幕分辨率等比计算坐标，
+  自动适配 16:9 / 16:10 / 4:3 及任意特种比例（无法匹配时按 16:9 拉伸铺满）。
+· 渲染：霓虹渐变面板 / 多层外发光 / 渐变发光环形仪表 / 刻度动画 /
+  发光大标题 / CRT 扫描线 / 数据雨 / 移动扫描束 / 径向光晕背景 / 噪点。
+· 数据：全部真实采集（psutil + RCON + Mojang API + 日志文件）。
 
-Run:
+运行：
     pip install pygame mcrcon psutil requests
-    export MC_RCON_PASSWORD=YOUR_RCON_PASSWORD   # optional
-    python3 dashboard.py                      # fullscreen (auto-adapts to screen)
-    MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py   # windowed
+    export MC_RCON_PASSWORD=你的rcon密码     # 可选
+    python3 dashboard.py                      # 全屏（自动适配屏幕）
+    MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py   # 窗口模式
 
-Hotkeys:
-    ESC        quit
-    T          theme cycle: auto → day → night
-    ↑ / ↓      manual log paging
-    R          jump log back to live (LIVE)
-    S          save screenshot to shots/
+快捷键：
+    ESC        退出
+    T          主题循环：自动 → 白天 → 黑夜
+    ↑ / ↓      日志手动翻页
+    R          日志回到最新（LIVE）
+    S          截图保存到 shots/
 """
 
 import os
@@ -45,11 +45,11 @@ import requests
 
 
 class RCONClient:
-    """Pure-socket Minecraft RCON client.
+    """纯 socket 实现的 Minecraft RCON 客户端。
 
-    No third-party mcrcon library: it uses signal.alarm for timeouts,
-    which throws "signal only works in main thread" in worker threads.
-    Protocol (SERVERDATA): TCP + 4-byte length + (id, type, payload).
+    不用第三方 mcrcon 库：该库用 signal.alarm 实现超时，
+    在子线程调用会抛 "signal only works in main thread"。
+    协议（SERVERDATA）：TCP + 4 字节包长 + (id, type, payload)。
     """
 
     def __init__(self, host, password, port=25575, timeout=3):
@@ -66,7 +66,7 @@ class RCONClient:
         self._send(3, self.password)          # SERVERDATA_AUTH
         _id, _type, _data = self._read()
         if _id == -1:
-            raise RuntimeError("RCON authentication failed (wrong password)")
+            raise RuntimeError("RCON 认证失败（密码错误）")
         return self
 
     def command(self, cmd):
@@ -100,7 +100,7 @@ class RCONClient:
         while len(buf) < n:
             chunk = self.sock.recv(n - len(buf))
             if not chunk:
-                raise ConnectionError("RCON connection closed by server")
+                raise ConnectionError("RCON 连接被服务器断开")
             buf += chunk
         return buf
 
@@ -111,7 +111,7 @@ class RCONClient:
         self.close()
         return False
 
-# ================= Config loading =================
+# ================= 配置加载 =================
 def load_config():
     config = {
         "rcon_ip": os.environ.get("MC_RCON_IP", "127.0.0.1"),
@@ -129,16 +129,16 @@ def load_config():
     return config
 
 CONFIG = load_config()
-BASE_W, BASE_H = 1792, 1024      # reference base resolution
+BASE_W, BASE_H = 1792, 1024      # 参考图基准分辨率
 FPS = 60
-DEMO = os.environ.get("MC_DEMO", "") == "1"   # demo mode: simulate online data without RCON
+DEMO = os.environ.get("MC_DEMO", "") == "1"   # 演示模式：无 RCON 时模拟在线数据
 
-# screenshot output dir (press S to save a frame)
+# 截图输出目录（按 S 键保存一帧）
 SHOT_DIR = os.environ.get("MC_SHOT_DIR", "shots")
 
 
 def save_shot(screen):
-    """Save the current screen frame to SHOT_DIR"""
+    """保存当前屏幕一帧到 SHOT_DIR"""
     try:
         os.makedirs(SHOT_DIR, exist_ok=True)
         name = f"dash_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
@@ -151,7 +151,7 @@ def save_shot(screen):
         return None
 
 
-# ================= Palette (high-contrast: clear even over VNC / low color depth) =================
+# ================= 配色（高对比版本：拉开明暗层次，VNC/低色深下依然清晰） =================
 COLOR_BG        = (6, 10, 16)
 COLOR_BG_DEEP   = (4, 7, 11)
 COLOR_CYAN      = (0, 246, 255)
@@ -167,7 +167,7 @@ COLOR_PANEL_BG  = (17, 36, 50)
 COLOR_TEXT      = (240, 248, 255)
 COLOR_DIM_TEXT  = (158, 178, 198)
 
-# Theme definitions
+# 主题定义
 THEMES = {
     "night": {
         "COLOR_BG": (6, 10, 16), "COLOR_BG_DEEP": (4, 7, 11),
@@ -193,7 +193,7 @@ CURRENT_THEME = "night"
 
 
 def apply_theme(name):
-    """Apply the theme colors to the global COLOR_* variables"""
+    """把主题色应用到全局 COLOR_* 变量"""
     global CURRENT_THEME, COLOR_BG, COLOR_BG_DEEP, COLOR_CYAN, COLOR_CYAN_DIM
     global COLOR_MAGENTA, COLOR_MAG_DIM, COLOR_GREEN, COLOR_YELLOW, COLOR_RED
     global COLOR_DARK, COLOR_DARKER, COLOR_PANEL_BG, COLOR_TEXT, COLOR_DIM_TEXT
@@ -225,49 +225,49 @@ def auto_theme_check():
         apply_theme(target)
 
 
-# ================= Global state =================
+# ================= 全局状态 =================
 class GlobalState:
     def __init__(self):
         self.system_stats = {}
-        self.history = {                      # history curves (max 120 points)
+        self.history = {                      # 历史曲线（最多120点）
             "CPU":   deque(maxlen=120),
-            "MEM":   deque(maxlen=120),
+            "内存":   deque(maxlen=120),
             "TPS":   deque(maxlen=120),
-            "NET":   deque(maxlen=120),
+            "网络":   deque(maxlen=120),
         }
         self.mc_tps = 0.0
         self.mc_online = False
         self.mc_version = "--"
-        self.mc_conn_t0 = None          # MC server online timer start (auto-restart on reboot)
-        self.mc_server_uptime = None    # MC server process real uptime (seconds), None=unknown
-        self.mc_off_since = None        # last RCON disconnect time (only restart timer after >60s)
+        self.mc_conn_t0 = None          # MC 服务器在线计时起点（重启自动重计）
+        self.mc_server_uptime = None    # MC 服务器进程真实运行时长（秒），None=未知
+        self.mc_off_since = None        # 最近一次 RCON 断开时刻（超过 60s 才重计）
         self.mc_players = 0
         self.mc_uptime = "--"
         self.demo = False
         self.log_lines = []
         self.player_list = []
         self.avatars = {}
-        self.thermal = []      # [(name, temp in °C), ...]
-        self.fans = []         # [(name, RPM), ...]
+        self.thermal = []      # [(名称, 当前温度℃), ...]
+        self.fans = []         # [(名称, RPM), ...]
         self.data_lock = threading.Lock()
         self.log_lock = threading.Lock()
         self.sys_boot = 0.0
 
-        # log rate calculation vars
+        # 日志速率计算变量
         self.last_log_lines = 0
         self.last_log_time = time.time()
-        # log scroll state (terminal-style: 0 = follow latest, >0 = looking back N lines)
+        # 日志滚动状态（终端式：0 = 跟随最新，>0 = 向上看历史行数）
         self.log_scroll = 0
         self.log_wrap_key = None
         self.log_wrap_flat = []
 
 state = GlobalState()
 
-# Thread pool: avoid creating threads too often
+# 线程池：避免频繁创建线程导致内存爆炸
 executor = ThreadPoolExecutor(max_workers=5)
 
 
-# ================= Font utilities =================
+# ================= 字体工具 =================
 try:
     from fontTools.ttLib import TTCollection as _TTCollection
 except Exception:
@@ -279,7 +279,7 @@ _font_file_cache = {}
 
 
 def _extract_cjk_font(face_index, out_path):
-    """Extract a face from NotoSansCJK-Regular.ttc into a standalone TTF (pygame has no ttc face index)"""
+    """从 NotoSansCJK-Regular.ttc 提取指定 face 为独立 TTF（pygame 不支持 ttc face 索引）"""
     if os.path.exists(out_path):
         return out_path
     if _TTCollection is None:
@@ -296,25 +296,25 @@ def _extract_cjk_font(face_index, out_path):
 
 
 def _cjk_font_file():
-    """Simplified Chinese font TTF (face 2 = Noto Sans CJK SC)"""
+    """简体中文字体 TTF（face 2 = Noto Sans CJK SC）"""
     if "sc" not in _font_file_cache:
         _font_file_cache["sc"] = _extract_cjk_font(2, _CJK_SC_TTF)
     return _font_file_cache["sc"]
 
 
 def _cjk_mono_font_file():
-    """monospace + Simplified Chinese TTF (face 7 = Noto Sans Mono CJK SC)"""
+    """等宽+简体中文字体 TTF（face 7 = Noto Sans Mono CJK SC）"""
     if "mono_sc" not in _font_file_cache:
         _font_file_cache["mono_sc"] = _extract_cjk_font(7, _CJK_MONO_SC_TTF)
     return _font_file_cache["mono_sc"]
 
 
 def load_font(size, mono=False):
-    """Probe system fonts at runtime; prefer Simplified Chinese (mono / regular)"""
+    """动态探测系统字体；优先简体中文（等宽/普通）"""
     if mono:
         p = _cjk_mono_font_file()
         if not p:
-            # if mono CJK extraction fails, fall back to SC sans (ensure CJK never renders as boxes)
+            # 等宽中文字体提取失败时，回退到 SC 黑体（保证中文绝不变成方块）
             p = _cjk_font_file()
         if p:
             try:
@@ -347,7 +347,7 @@ def load_font(size, mono=False):
 
 
 def wrap_text(text, font, max_w, half_w, full_w):
-    """Wrap a line into multiple lines by available width (mono fast estimate + binary correction)"""
+    """按可用宽度把一行文本折成多行（等宽字体快速估算 + 超宽段二分校正）"""
     if font.size(text)[0] <= max_w:
         return [text]
     out = []
@@ -364,7 +364,7 @@ def wrap_text(text, font, max_w, half_w, full_w):
             curw += w
     if cur:
         out.append(cur)
-    # correction: binary-split segments still too wide
+    # 校正：估算有偏差时把仍超宽的段用二分切掉
     final = []
     for seg in out:
         while seg and font.size(seg)[0] > max_w:
@@ -395,7 +395,7 @@ def fmt_uptime(seconds):
 
 
 def ratio_tag(w, h):
-    """Compute the aspect label from real resolution (16:9 / 16:10 / 4:3 / 21:9 / unknown→WxH)"""
+    """根据真实分辨率计算显示比例标识（16:9 / 16:10 / 4:3 / 21:9 / 未知→WxH）"""
     r = w / h
     for tag, v in (("21:9", 21 / 9), ("16:9", 16 / 9),
                    ("16:10", 1.6), ("4:3", 4 / 3)):
@@ -404,13 +404,13 @@ def ratio_tag(w, h):
     return f"{w}x{h}"
 
 
-# ================= Layout computation (scaled to real resolution, base 1792x1024) =================
+# ================= 布局计算（按实际分辨率等比缩放，基准 1792x1024） =================
 class Layout:
     def __init__(self, w, h):
         self.w, self.h = w, h
         self.sx = w / BASE_W
         self.sy = h / BASE_H
-        self.fs = min(self.sx, self.sy)   # font uses min scale to prevent overflow on 4:3 etc.
+        self.fs = min(self.sx, self.sy)   # 字体按最小缩放，防止 4:3 等屏幕溢出
 
     def xy(self, x, y):
         return (int(x * self.sx), int(y * self.sy))
@@ -429,9 +429,9 @@ class Layout:
         return load_font(max(8, int(size * self.fs)), mono=True)
 
 
-# ================= Utilities & API modules =================
+# ================= 工具与 API 模块 =================
 def fetch_player_avatar(username):
-    """Real Mojang API & skin fetch (with de-dup request lock)"""
+    """真实 Mojang API 与头像拉取 (带防重复请求锁)"""
     if username in state.avatars:
         return
     try:
@@ -450,9 +450,9 @@ def fetch_player_avatar(username):
         state.avatars[username] = None
 
 
-# ================= Real data collection threads =================
+# ================= 真实数据采集线程 =================
 def get_system_stats():
-    """Real system data (CPU/mem/disk/net/log rate/threads)"""
+    """真实系统数据（CPU/内存/磁盘/网络/日志速率/线程）"""
     cpu = psutil.cpu_percent(interval=None)
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
@@ -478,7 +478,7 @@ def get_system_stats():
     except Exception:
         pass
 
-    # network speed (real delta)
+    # 网络速率（真实差值）
     net_speed = 0.0
     now = time.time()
     if getattr(state, "_net_last", None) is not None:
@@ -491,33 +491,33 @@ def get_system_stats():
     with state.data_lock:
         state.system_stats = {
             "CPU": (f"{cpu:.0f}%", cpu),
-            "MEM": (f"{mem.used / (1024 ** 3):.1f}G", mem.percent),
-            "DISK": (f"{disk.used / (1024 ** 3):.1f}G", disk.percent),
-            "NET↓": (f"{net_speed:.1f}", min(100.0, net_speed * 4)),
+            "内存": (f"{mem.used / (1024 ** 3):.1f}G", mem.percent),
+            "磁盘": (f"{disk.used / (1024 ** 3):.1f}G", disk.percent),
+            "网络↓": (f"{net_speed:.1f}", min(100.0, net_speed * 4)),
             "TPS": (f"{state.mc_tps:.1f}", min(100.0, (state.mc_tps / 20) * 100)),
-            "ONLINE": (str(state.mc_players), min(100.0, state.mc_players / max(1, CONFIG["max_players"]) * 100)),
-            "log": (f"{log_lines_per_sec}/s", min(100.0, log_lines_per_sec * 2)),
-            "THREADS": (str(threading.active_count()), min(100.0, threading.active_count() * 2)),
+            "在线": (str(state.mc_players), min(100.0, state.mc_players / max(1, CONFIG["max_players"]) * 100)),
+            "日志": (f"{log_lines_per_sec}/s", min(100.0, log_lines_per_sec * 2)),
+            "线程": (str(threading.active_count()), min(100.0, threading.active_count() * 2)),
         }
         state.history["CPU"].append(cpu)
-        state.history["MEM"].append(mem.percent)
+        state.history["内存"].append(mem.percent)
         state.history["TPS"].append(min(100.0, state.mc_tps / 20 * 100))
-        state.history["NET"].append(min(100.0, net_speed * 4))
+        state.history["网络"].append(min(100.0, net_speed * 4))
 
 
 def parse_list_response(resp):
-    """Loosely parse /list output: EN/CN/no players/color codes (plugin rewrites covered)"""
+    """宽松解析 /list 输出：兼容英文/中文/无玩家/颜色码（插件改写也能兜底）"""
     if not resp:
         return [], None
     clean = re.sub(r"§[0-9a-fk-or]", "", resp)
-    # player names: part after EN/CN colon
+    # 玩家名：中英文冒号后的部分
     players = []
     sep = ": " if ": " in clean else ("：" if "：" in clean else None)
     if sep is not None:
         rest = clean.split(sep, 1)[1].strip()
         if rest:
             players = [p.strip() for p in rest.split(",") if p.strip()]
-    # total: EN "There are X of a max of Y" / "X/Y" / CN "online X / total Y"
+    # 总人数：英文 "There are X of a max of Y" / "X/Y" / 中文 "在线 X/共 Y"
     total = None
     m = re.search(r"(\d+)\s+of\s+a\s+max\s+of\s+(\d+)", clean)
     if not m:
@@ -532,15 +532,15 @@ def parse_list_response(resp):
 
 
 def get_real_mc_data():
-    """Fetch real MC data over RCON: own socket client (no signal pitfalls) + vanilla commands + loose parsing"""
+    """通过 RCON 获取真实 MC 数据：自研 socket 客户端（无 signal 坑）+ 原版指令 + 宽松解析"""
     if not CONFIG["rcon_password"]:
         return
     try:
         with RCONClient(CONFIG["rcon_ip"], CONFIG["rcon_password"],
                         port=CONFIG["rcon_port"], timeout=3) as rcon:
-            # RCON channel alive = server online (even unusual output lights ONLINE)
+            # RCON 通道通 = 服务器在线（即使输出格式特殊也能点亮 ONLINE）
             with state.data_lock:
-                # offline→online: only re-time on first connect or after >60s offline (real restart)
+                # 从离线→在线：仅当首次连接、或断开超过 60 秒（真重启）时才重计
                 if not state.mc_online:
                     if state.mc_conn_t0 is None or (
                             state.mc_off_since is not None
@@ -549,7 +549,7 @@ def get_real_mc_data():
                     state.mc_off_since = None
                 state.mc_online = True
 
-            # ---- player list: prefer vanilla command; fall back to parsing when a plugin owns /list ----
+            # ---- 玩家列表：优先原版指令，插件接管 /list 时回退解析 ----
             list_resp = rcon.command("minecraft:list")
             if any(k in list_resp.lower() for k in ("unknown", "未知的", "错误", "unrecognized")):
                 list_resp = rcon.command("list")
@@ -558,7 +558,7 @@ def get_real_mc_data():
                 state.player_list = players
                 state.mc_players = len(players)
 
-            # ---- TPS: spigot/paper command (vanilla has no /tps; keep old value silently on failure) ----
+            # ---- TPS：spigot/paper 指令（原版无 /tps，失败静默保持旧值） ----
             try:
                 tps_resp = rcon.command("tps")
                 tps_m = re.search(r"([0-9]+\.[0-9]+)", tps_resp)
@@ -568,7 +568,7 @@ def get_real_mc_data():
             except Exception:
                 pass
 
-            # ---- version: RCON version command (vanilla/Paper) ----
+            # ---- 版本：RCON version 指令（原版/Paper 均支持） ----
             try:
                 ver_resp = rcon.command("version")
                 vm = re.search(r"(\d+\.\d+(?:\.\d+)?)", ver_resp)
@@ -582,7 +582,7 @@ def get_real_mc_data():
             if p not in state.avatars:
                 executor.submit(fetch_player_avatar, p)
     except Exception as e:
-        print(f"[RCON] fetch failed: {type(e).__name__}: {e}")
+        print(f"[RCON] 获取失败: {type(e).__name__}: {e}")
         with state.data_lock:
             state.mc_online = False
             if state.mc_off_since is None:
@@ -590,17 +590,17 @@ def get_real_mc_data():
 
 
 def parse_logs():
-    """Real log reading & regex parsing (keep last 1000 lines, terminal-style scrolling)"""
+    """真实日志读取与正则解析（保留最近 1000 行，终端式滚动查看）"""
     if not os.path.exists(CONFIG["log_path"]):
-        return [(f"[WARN] log file not found: {CONFIG['log_path']}", COLOR_MAGENTA)]
+        return [(f"[WARN] 日志文件不存在: {CONFIG['log_path']}", COLOR_MAGENTA)]
     try:
-        # tail read (max ~600KB, a few thousand lines), then keep last 1000 lines
+        # 尾部读取（最多 ~600KB 的尾巴，约几千行），再截断保留 1000 行
         with open(CONFIG["log_path"], 'r', encoding='utf-8', errors='ignore') as f:
             f.seek(0, 2)
             size = f.tell()
             f.seek(max(0, size - 600000))
             if size > 600000:
-                f.readline()  # drop a possibly truncated half line
+                f.readline()  # 丢弃可能被截断的半行
             lines = f.readlines()[-1000:]
         parsed = []
         join_re = re.compile(r"\[.*?\] \[Server thread/INFO\]: (.*?) joined the game")
@@ -612,13 +612,13 @@ def parse_logs():
             if not line:
                 continue
             if "RCON" in line.upper():
-                continue  # filter RCON-related lines out of the panel log
+                continue  # 过滤 RCON 相关行，不显示在面板日志里
             if err_re.search(line):
                 parsed.append(("[ERR] " + line, COLOR_MAGENTA))
             elif join_re.search(line):
-                parsed.append((f"[+] {join_re.search(line).group(1)} joined the game", COLOR_GREEN))
+                parsed.append((f"[+] {join_re.search(line).group(1)} 加入游戏", COLOR_GREEN))
             elif left_re.search(line):
-                parsed.append((f"[-] {left_re.search(line).group(1)} left the game", COLOR_YELLOW))
+                parsed.append((f"[-] {left_re.search(line).group(1)} 离开游戏", COLOR_YELLOW))
             elif chat_re.search(line):
                 p, msg = chat_re.search(line).groups()
                 parsed.append((f"<{p}> {msg}", COLOR_TEXT))
@@ -626,18 +626,18 @@ def parse_logs():
                 parsed.append((line, COLOR_DIM_TEXT))
         return parsed[-1000:]
     except Exception as e:
-        return [(f"[ERR] log read failed: {e}", COLOR_MAGENTA)]
+        return [(f"[ERR] 日志读取失败: {e}", COLOR_MAGENTA)]
 
 
 def get_mc_server_uptime():
-    """Get the real MC server process uptime (seconds).
+    """获取 MC 服务器进程真实运行时长（秒）。
 
-    Method 1 (most accurate, correct across days/reboots): read the java server process start time
-    (/proc/<pid>/stat starttime + system boot time), pure system-level, plugin-free.
-    Method 2 (fallback): estimate from the "Done (" line timestamp (same-day; best-effort across days).
-    Returns None on failure.
+    方案 1（最准，跨天/跨重启正确）：读取 java 服务器进程的启动时间
+    （/proc/<pid>/stat 的 starttime + 系统启动时刻），纯系统级、不依赖任何插件。
+    方案 2（回退）：日志启动完成行 "Done (" 的时间戳估算（当天时间，跨天尽力回推）。
+    失败返回 None。
     """
-    # 1) process-level: java -jar server.jar start time
+    # 1) 进程级：java -jar server.jar 的启动时刻
     try:
         out = subprocess.check_output(
             ["pgrep", "-f", r"server\.jar"], timeout=3).decode().strip()
@@ -652,7 +652,7 @@ def get_mc_server_uptime():
             return max(0, time.time() - start_ts)
     except Exception:
         pass
-    # 2) fallback: last "Done (" line
+    # 2) 回退：日志启动完成行 "Done ("（取最后一条）
     try:
         with open(CONFIG["log_path"], 'r', encoding='utf-8', errors='ignore') as f:
             head = f.read(200000)
@@ -674,27 +674,27 @@ def get_mc_server_uptime():
 def background_worker():
     _demo_t0 = time.time()
     _demo_msgs = [
-        "<Steve> This server is awesome!",
-        "<Alex> Heading to the nether for quartz",
-        "<Herobrine> Who took the chest at spawn?",
+        "<Steve> 服务器真不错！",
+        "<Alex> 我去下界挖石英了",
+        "<Herobrine> 谁把出生点的箱子搬走了？",
         "[Server thread/INFO]: Saved the game",
         "[Server thread/INFO]: Autosave complete",
-        "<Steve> The auto furnace is full again",
+        "<Steve> 家里的自动熔炉又满了",
         "[Server thread/WARN]: Can't keep up! Is the server overloaded?",
-        "<Alex> Wither fight tonight?",
+        "<Alex> 今晚打凋灵吗？",
         "[Server thread/INFO]: Done (4.213s)! For help, type \"help\"",
-        "<Herobrine> End portal at x=120 z=340",
+        "<Herobrine> 末地传送门位置在 x=120 z=340",
     ]
     _uptime_tick = 0
     while True:
         get_system_stats()
         get_real_mc_data()
-        # refresh MC server process real uptime every ~10s (plugin-free)
+        # 每 ~10 秒刷新 MC 服务器进程真实运行时长（不依赖插件）
         if _uptime_tick % 5 == 0:
             with state.data_lock:
                 state.mc_server_uptime = get_mc_server_uptime()
         _uptime_tick += 1
-        # demo mode: simulate an online server without real RCON
+        # 演示模式：无真实 RCON 数据时模拟在线服务器
         if DEMO:
             with state.data_lock:
                 if not state.mc_online:
@@ -728,7 +728,7 @@ def background_worker():
         time.sleep(2)
 
 
-# ================= Advanced UI renderer (v3: glow / gradient / arcs / animation) =================
+# ================= 高级 UI 渲染引擎（v3：发光 / 渐变 / 弧度 / 动画） =================
 class CyberpunkRenderer:
     def __init__(self, screen, layout):
         self.screen = screen
@@ -750,18 +750,18 @@ class CyberpunkRenderer:
         self.glitch_until = 0
         self.glitch_off = 0
 
-        # digital rain columns
+        # 数据雨列
         self.rain_cols = []
         self._init_rain()
 
-    # ---------- Common utilities ----------
+    # ---------- 通用工具 ----------
     def lerp(self, c1, c2, t):
         return (int(c1[0] + (c2[0] - c1[0]) * t),
                 int(c1[1] + (c2[1] - c1[1]) * t),
                 int(c1[2] + (c2[2] - c1[2]) * t))
 
     def text_glow(self, text, font, color, pos, glow_color=None, radius=3):
-        """Glowing text: low-alpha multi-offset layers + main body"""
+        """发光文字：低透明度多位移叠加 + 主体"""
         g = glow_color or color
         surf = font.render(text, True, color)
         x, y = pos
@@ -775,7 +775,7 @@ class CyberpunkRenderer:
 
     def text_stroke(self, text, font, color, pos, stroke=2,
                     stroke_color=(0, 0, 0)):
-        """Fallback formula: solid text + pure black outline (no glow), readable on any bg"""
+        """抢救公式：纯色文字 + 纯黑描边（不发光），任何亮/暗背景上都清晰"""
         surf = font.render(text, True, color)
         bsurf = font.render(text, True, stroke_color)
         x, y = pos
@@ -786,7 +786,7 @@ class CyberpunkRenderer:
         self.screen.blit(surf, (x, y))
 
     def blur_glow(self, text, font, color, pos, radius=6):
-        """Blurred halo (big titles/TPS): downscale-upscale to fake Gaussian blur"""
+        """模糊光晕（大标题/TPS 用）：缩小再放大模拟高斯模糊"""
         base = font.render(text, True, color)
         x, y = pos
         w, h = base.get_size()
@@ -812,7 +812,7 @@ class CyberpunkRenderer:
                 "chars": [random.choice(chars) for _ in range(44)],
             })
 
-    # ---------- Background layer (pre-rendered + radial neon glow) ----------
+    # ---------- 背景层（预渲染 + 径向霓虹光晕） ----------
     def build_background_layers(self):
         W, H = self.L.w, self.L.h
         if self.grid_surf is None or self.grid_surf.get_size() != (W, H):
@@ -834,7 +834,7 @@ class CyberpunkRenderer:
                 pygame.draw.line(sl, (0, 0, 0, 40), (0, y), (W, y))
             self.scanline_surf = sl
 
-        # radial glow: cyan top-left + magenta bottom-right (breathing)
+        # 径向光晕：左上青 + 右下品红（呼吸）
         pulse = 0.5 + 0.5 * math.sin(time.time() * 0.8)
         bg = pygame.Surface((W, H), pygame.SRCALPHA)
         c1 = COLOR_CYAN
@@ -854,7 +854,7 @@ class CyberpunkRenderer:
         self.screen.blit(self.scanline_surf, (0, 0))
         self.draw_data_rain()
 
-    # ---------- digital rain ----------
+    # ---------- 数据雨 ----------
     def draw_data_rain(self):
         for col in self.rain_cols:
             cy = col["y"]
@@ -870,19 +870,19 @@ class CyberpunkRenderer:
             if col["y"] - col["len"] * 22 > self.L.h:
                 col["y"] = random.randint(-self.L.h, -30)
 
-    # ---------- Panels (gradient base + multi-layer glow + rounded corners + top highlight) ----------
+    # ---------- 面板（渐变底 + 多层发光 + 弧形角 + 顶部亮条） ----------
     def get_panel_bg(self, w, h):
         key = (w, h, CURRENT_THEME)
         if key not in self.panel_bg_cache:
             surf = pygame.Surface((w, h), pygame.SRCALPHA)
-            # vertical gradient: bright top, dark bottom
+            # 竖向渐变：顶亮底暗
             top = (*COLOR_PANEL_BG, 216)
             bot = (*COLOR_BG_DEEP, 236)
             for y in range(h):
                 t = y / max(1, h - 1)
                 c = self.lerp(top, bot, t)
                 pygame.draw.line(surf, c, (0, y), (w, y))
-            # top inner highlight strip
+            # 顶部内侧亮条（高光）
             for y in range(min(10, h)):
                 a = int(70 * (1 - y / 10))
                 pygame.draw.line(surf, (*COLOR_CYAN, a), (0, y), (w, y))
@@ -904,7 +904,7 @@ class CyberpunkRenderer:
         return self.glow_cache[key]
 
     def draw_panel(self, x, y, w, h, title="", accent=COLOR_CYAN, pulse=True):
-        """Neon breathing panel: gradient base + outer glow + stroke + rounded corners + title"""
+        """霓虹呼吸面板：渐变底 + 外发光 + 描边 + 弧形角 + 标题"""
         breath = abs(math.sin(time.time() * 1.6)) * 0.5 + 0.5 if pulse else 0.8
         glow = self.get_glow_surface(w, h, accent)
         glow.set_alpha(int(120 * breath))
@@ -912,13 +912,13 @@ class CyberpunkRenderer:
 
         self.screen.blit(self.get_panel_bg(w, h), (x, y))
 
-        # main stroke (dimmed) + inner stroke
+        # 主描边（降亮不抢戏）+ 内描边
         pygame.draw.rect(self.screen, self.lerp(accent, COLOR_BG_DEEP, 0.5),
                          (x, y, w, h), 2, border_radius=12)
         pygame.draw.rect(self.screen, self.lerp(COLOR_PANEL_BG, accent, 0.5),
                          (x + 5, y + 5, w - 10, h - 10), 1, border_radius=9)
 
-        # top glow strip (transparent layer)
+        # 顶部发光条（透明层叠加）
         tw = int(w * 0.55)
         top_s = pygame.Surface((tw, 5), pygame.SRCALPHA)
         for i in range(4):
@@ -927,7 +927,7 @@ class CyberpunkRenderer:
         self.screen.blit(top_s, (x + 18, y + 1),
                          special_flags=pygame.BLEND_RGBA_ADD)
 
-        # four-corner arc brackets
+        # 四角弧形括号
         Lc, off = int(w * 0.028), 10
         corners = [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
         for cx, cy in corners:
@@ -937,7 +937,7 @@ class CyberpunkRenderer:
                              (cx + sgx * (off + Lc), cy), 2)
             pygame.draw.line(self.screen, accent, (cx, cy + sgy * off),
                              (cx, cy + sgy * (off + Lc)), 2)
-            # arc
+            # 弧
             if sgx == 1 and sgy == -1:
                 rect = pygame.Rect(cx - Lc - off, cy - Lc - off, Lc * 2, Lc * 2)
                 pygame.draw.arc(self.screen, accent, rect, 0, math.pi / 2, 2)
@@ -960,10 +960,10 @@ class CyberpunkRenderer:
             pygame.draw.circle(self.screen, COLOR_GREEN if state.mc_online else COLOR_RED,
                                (x + w - 24, y - 8), 9, 1)
 
-    # ---------- Ring gauge (outer halo + gradient glow arc + tick animation) ----------
+    # ---------- 环形仪表（外光晕 + 渐变发光弧 + 刻度动画） ----------
     def draw_ring_gauge(self, cx, cy, radius, percent, value_str, label,
                         accent=COLOR_CYAN):
-        # outer halo (translucent: draw to SRCALPHA layer first to avoid alpha loss)
+        # 外光晕（半透明：先画到 SRCALPHA 层再叠加，避免 alpha 失效变成实心大圆）
         breath = abs(math.sin(time.time() * 2.2 + cx * 0.01)) * 0.5 + 0.5
         glow_r = radius + 36
         gs = pygame.Surface((glow_r * 2, glow_r * 2), pygame.SRCALPHA)
@@ -974,12 +974,12 @@ class CyberpunkRenderer:
         self.screen.blit(gs, (cx - glow_r, cy - glow_r),
                          special_flags=pygame.BLEND_RGBA_ADD)
 
-        # dark base ring
+        # 暗底环
         rect = pygame.Rect(cx - radius, cy - radius, radius * 2, radius * 2)
         pygame.draw.arc(self.screen, COLOR_DARKER, rect,
                         math.radians(-135), math.radians(135), radius and 12)
 
-        # gradient glow arc (glow layer on transparent surface + main arc)
+        # 渐变发光弧（辉光层先画到透明面再叠加 + 主弧）
         pct = max(0.0, min(100.0, percent))
         if pct > 0:
             gs2 = pygame.Surface((radius * 2 + 30, radius * 2 + 30), pygame.SRCALPHA)
@@ -990,7 +990,7 @@ class CyberpunkRenderer:
                 a1 = math.radians(-135 + (i + 1) * 270 / steps)
                 ratio = i / max(1, steps - 1)
                 c = self.lerp(accent, COLOR_MAGENTA, ratio * 0.85)
-                pygame.draw.arc(gs2, (*c, 70), rect2, a0, a1, 20)      # glow
+                pygame.draw.arc(gs2, (*c, 70), rect2, a0, a1, 20)      # 辉光
             self.screen.blit(gs2, (cx - radius - 15, cy - radius - 15),
                              special_flags=pygame.BLEND_RGBA_ADD)
             for i in range(steps):
@@ -998,13 +998,13 @@ class CyberpunkRenderer:
                 a1 = math.radians(-135 + (i + 1) * 270 / steps)
                 ratio = i / max(1, steps - 1)
                 c = self.lerp(accent, COLOR_MAGENTA, ratio * 0.85)
-                pygame.draw.arc(self.screen, c, rect, a0, a1, 9)       # main arc
+                pygame.draw.arc(self.screen, c, rect, a0, a1, 9)       # 主弧
             end_ang = math.radians(-135 + pct * 2.7)
             ex = cx + math.cos(end_ang) * radius
             ey = cy + math.sin(end_ang) * radius
             pygame.draw.circle(self.screen, (245, 250, 255), (int(ex), int(ey)), 4)
 
-        # ticks (rotating; main ticks dimmed)
+        # 刻度（旋转动画，主刻度改暗色不抢戏）
         offset = time.time() * 30
         for i in range(48):
             ang = math.radians(i * (360 / 48) + (offset % 360))
@@ -1017,13 +1017,13 @@ class CyberpunkRenderer:
             c = self.lerp(accent, COLOR_BG_DEEP, 0.62) if i % 6 == 0 else COLOR_DARK
             pygame.draw.line(self.screen, c, (x1, y1), (x2, y2), 2)
 
-        # inner fine ring (solid dark to avoid alpha loss)
+        # 内圈细环（半透明改不透明暗色，避免 alpha 失效）
         pygame.draw.arc(self.screen, self.lerp(COLOR_DARKER, accent, 0.45),
                         pygame.Rect(cx - radius + 6, cy - radius + 6,
                                     (radius - 6) * 2, (radius - 6) * 2),
                         0, math.pi * 2, 1)
 
-        # center value (white + thick black outline, shifted below the ring top) + percent + label (outside, outlined)
+        # 中心数值（纯白 + 粗黑描边，下移避开圆环顶部）+ 百分比 + 标签（环外，黑边）
         vs = self.font_med.render(value_str, True, (255, 255, 255))
         self.text_stroke(value_str, self.font_med, (255, 255, 255),
                          (cx - vs.get_width() // 2, cy - 12), stroke=3)
@@ -1035,7 +1035,7 @@ class CyberpunkRenderer:
         self.text_stroke(label, self.font_small, accent,
                          (cx - ls.get_width() // 2, cy + radius + 22), stroke=2)
 
-    # ---------- memory + TPS panel ----------
+    # ---------- 内存含量 + TPS 面板 ----------
     def draw_mem_tps_panel(self, x, y, w, h):
         try:
             vm = psutil.virtual_memory()
@@ -1047,7 +1047,7 @@ class CyberpunkRenderer:
             pct = 0.0
 
         lw = int(w * 0.62)
-        # divider (glow: transparent layer)
+        # 分隔线（发光：透明层叠加）
         pygame.draw.line(self.screen, COLOR_DARK, (x + lw + 8, y + 24),
                          (x + lw + 8, y + h - 24), 1)
         dline = pygame.Surface((3, h - 48), pygame.SRCALPHA)
@@ -1055,18 +1055,18 @@ class CyberpunkRenderer:
         self.screen.blit(dline, (x + lw + 9, y + 24),
                          special_flags=pygame.BLEND_RGBA_ADD)
 
-        self.text_glow("M E M O R Y", self.font_small, COLOR_CYAN, (x + 24, y + 16),
+        self.text_glow("内 存 含 量", self.font_small, COLOR_CYAN, (x + 24, y + 16),
                        glow_color=COLOR_CYAN, radius=2)
 
-        # big text: USED XG / TOTAL YG (white + black outline, no glow)
+        # 大字：已用 XG / 共 YG（纯白 + 黑描边，去发光）
         big = self.font_big.render(f"{used_gb:.0f}G / {total_gb:.0f}G", True, (255, 255, 255))
         self.text_stroke(f"{used_gb:.0f}G / {total_gb:.0f}G", self.font_big,
                          (255, 255, 255), (x + 24, y + 50), stroke=3)
-        sub = self.font_small.render(f"USED {used_gb:.1f}G   TOTAL {total_gb:.0f}G",
+        sub = self.font_small.render(f"已用 {used_gb:.1f}G   共 {total_gb:.0f}G",
                                      True, (196, 214, 232))
         self.screen.blit(sub, (x + 24, y + 122))
 
-        # glowing progress bar (glow on transparent layer)
+        # 发光进度条（辉光画透明层）
         bar_x, bar_y, bar_w, bar_h = x + 24, y + 164, lw - 60, 16
         pygame.draw.rect(self.screen, COLOR_DARKER, (bar_x, bar_y, bar_w, bar_h),
                          border_radius=8)
@@ -1079,7 +1079,7 @@ class CyberpunkRenderer:
                              special_flags=pygame.BLEND_RGBA_ADD)
             pygame.draw.rect(self.screen, bar_c, (bar_x, bar_y, fill, bar_h),
                              border_radius=8)
-            # front highlight
+            # 前端亮点
             pygame.draw.circle(self.screen, (245, 250, 255),
                                (bar_x + fill, bar_y + bar_h // 2), 4)
         pct_s = self.font_med.render(f"{pct:.0f}%", True, bar_c)
@@ -1089,15 +1089,15 @@ class CyberpunkRenderer:
             pygame.draw.line(self.screen, COLOR_BG, (gx, bar_y - 4),
                              (gx, bar_y + bar_h + 4), 1)
 
-        # memory history line (double-layer glow: glow layer + main line)
+        # 内存历史折线（发光双层：辉光透明层 + 主细线）
         with state.data_lock:
-            mem_hist = list(state.history["MEM"])[-60:]
+            mem_hist = list(state.history["内存"])[-60:]
         wx, wy, ww, wh = x + 24, y + 204, lw - 60, h - 234
         pygame.draw.rect(self.screen, COLOR_DARKER, (wx, wy, ww, wh), border_radius=6)
         for gy in range(0, wh + 1, max(1, wh // 4)):
             pygame.draw.line(self.screen, (22, 42, 60), (wx, wy + gy), (wx + ww, wy + gy))
         if len(mem_hist) > 1:
-            # dynamic range: normalize by real min-max so the curve never pegs
+            # 动态范围缩放：按数据实际 min-max 归一化，避免高占用时曲线一直顶格
             lo, hi = min(mem_hist), max(mem_hist)
             if hi - lo < 1.0:
                 lo, hi = hi - 5.0, hi + 5.0
@@ -1120,7 +1120,7 @@ class CyberpunkRenderer:
         self.text_stroke("MEM % HISTORY", self.font_tiny, (176, 196, 220),
                          (wx + 8, wy + 6), stroke=1)
 
-        # right half: TPS ring
+        # 右半：TPS 圆环
         tps = state.mc_tps
         tps_pct = min(100.0, (tps / 20.0) * 100.0) if tps > 0 else 0.0
         cx = x + lw + 10 + (w - lw - 20) // 2
@@ -1142,7 +1142,7 @@ class CyberpunkRenderer:
         nt = self.font_small.render(note, True, nc)
         self.screen.blit(nt, (cx - nt.get_width() // 2, cy + 126))
 
-    # ---------- glitch title (glow) ----------
+    # ---------- glitch 标题（发光） ----------
     def draw_glitch_title(self, text, cx, top, font=None):
         font = font or self.font_huge
         now = time.time()
@@ -1152,7 +1152,7 @@ class CyberpunkRenderer:
         base = font.render(text, True, COLOR_CYAN)
         x = cx - base.get_width() // 2
 
-        # halo
+        # 光晕
         try:
             small = pygame.transform.smoothscale(base, (max(4, base.get_width() // 5),
                                                         max(4, base.get_height() // 5)))
@@ -1184,7 +1184,7 @@ class CyberpunkRenderer:
                 pygame.draw.line(self.screen, COLOR_CYAN,
                                  (x - 40, sy), (x + wsurf.get_width() + 40, sy), 1)
 
-    # ---------- Top status bar ----------
+    # ---------- 顶部状态条 ----------
     def draw_status_bar(self):
         now = datetime.now()
         clock_s = now.strftime("%H:%M:%S")
@@ -1197,7 +1197,7 @@ class CyberpunkRenderer:
             mc_up = fmt_uptime(up) if up is not None else "--"
         mode_txt = {"auto": "AUTO", "day": "DAY", "night": "NIGHT"}[THEME_MODE]
 
-        # top-right: real aspect label + theme + time + uptime + RCON
+        # 右上角：真实比例标识 + 主题 + 时间 + 运行时长 + RCON
         right = self.L.w - 24
         if state.demo:
             rcon_txt = "RCON SIM"
@@ -1221,11 +1221,11 @@ class CyberpunkRenderer:
                              (x + 2, 12), (x + 2, 34), 1)
             self.screen.blit(s, (x + 8, 14))
 
-        # bottom-left node name (dim small text, away from edges)
+        # 左下角节点名（暗色小字，远离边缘避免裁切）
         nm = self.font_small.render(CONFIG["server_name"], True, (44, 68, 92))
         self.screen.blit(nm, (56, 16))
 
-    # ---------- MC status panel ----------
+    # ---------- MC 状态面板 ----------
     def draw_mc_status(self, x, y, w):
         sx, sy = x, y
         pw = w
@@ -1238,7 +1238,7 @@ class CyberpunkRenderer:
         pygame.draw.circle(self.screen, self.lerp(COLOR_BG_DEEP, stc, 0.5),
                            (sx + 190, sy + 26), 16, 1)
 
-        # huge TPS (white + thick black outline — needed on bright backgrounds)
+        # 超大 TPS（纯白 + 粗黑描边，去发光——亮底上必须黑边才浮得出来）
         tps_txt = f"{state.mc_tps:.1f}"
         tps_color = COLOR_GREEN if state.mc_tps >= 19 else \
             (COLOR_YELLOW if state.mc_tps >= 15 else
@@ -1248,24 +1248,24 @@ class CyberpunkRenderer:
         tps_label = self.font_med.render("TPS", True, COLOR_CYAN)
         self.text_stroke("TPS", self.font_med, COLOR_CYAN,
                          (sx + 210, sy + 118), stroke=2)
-        # TPS bottom tick bar
+        # TPS 底部刻度条
         tw = min(200, int(pw * 0.35))
         pygame.draw.rect(self.screen, COLOR_DARKER, (sx, sy + 186, tw, 8), border_radius=4)
         tps_pct = min(1.0, state.mc_tps / 20.0)
         pygame.draw.rect(self.screen, tps_color, (sx, sy + 186, int(tw * tps_pct), 8),
                          border_radius=4)
 
-        # info lines (white + thin black edge; CJK rendered with sans, never boxes)
+        # 信息行（白字 + 细黑边；用黑体渲染，中文绝不方块）
         if state.demo and state.mc_uptime != "--":
             mc_up = state.mc_uptime
         else:
             up = state.mc_server_uptime
             mc_up = fmt_uptime(up) if up is not None else "--"
         infos = [
-            (f"UPTIME: {mc_up}", (255, 255, 255)),
-            (f"VERSION: {state.mc_version}", (255, 255, 255)),
-            (f"PLAYER: {state.mc_players}/{CONFIG['max_players']}", (255, 255, 255)),
-            (f"LOG: {CONFIG['log_path'][-30:]}", (176, 196, 220)),
+            (f"运行时长: {mc_up}", (255, 255, 255)),
+            (f"版本: {state.mc_version}", (255, 255, 255)),
+            (f"玩家: {state.mc_players}/{CONFIG['max_players']}", (255, 255, 255)),
+            (f"日志: {CONFIG['log_path'][-30:]}", (176, 196, 220)),
         ]
         for i, (line, c) in enumerate(infos):
             s = self.font_small.render(line, True, c)
@@ -1274,11 +1274,11 @@ class CyberpunkRenderer:
                              (sx, sy + 208 + i * 30),
                              (sx + pw - 60, sy + 208 + i * 30))
 
-    # ---------- Player cards ----------
+    # ---------- 玩家卡片 ----------
     def draw_player_card(self, x, y, name, avatar_surf, online=True):
         Lc = self.L
         size = Lc.r(100)
-        # glowing border (transparent layer)
+        # 发光边框（透明层叠加）
         glow_s = pygame.Surface((size + 14, size + 14), pygame.SRCALPHA)
         for i in range(3, 0, -1):
             a = int(46 / (4 - i))
@@ -1295,7 +1295,7 @@ class CyberpunkRenderer:
             except Exception:
                 avatar_surf = None
         if not avatar_surf:
-            # cyber placeholder: glowing head silhouette + visor + scanlines
+            # 赛博风占位：发光头影 + 面罩 + 扫描线
             cxm, cym = x + size // 2, y + int(size * 0.38)
             hr = int(size * 0.26)
             head = pygame.Surface((hr * 2 + 8, hr * 2 + 8), pygame.SRCALPHA)
@@ -1306,7 +1306,7 @@ class CyberpunkRenderer:
                              special_flags=pygame.BLEND_RGBA_ADD)
             pygame.draw.circle(self.screen, COLOR_DARKER, (cxm, cym), hr)
             pygame.draw.circle(self.screen, COLOR_MAGENTA, (cxm, cym), hr, 2)
-            # visor
+            # 面罩
             mw, mh = int(hr * 1.3), int(hr * 0.5)
             pygame.draw.rect(self.screen, COLOR_CYAN,
                              (cxm - mw // 2, cym + int(hr * 0.25), mw, mh),
@@ -1314,26 +1314,26 @@ class CyberpunkRenderer:
             pygame.draw.line(self.screen, (0, 60, 70),
                              (cxm - mw // 2 + 3, cym + int(hr * 0.25) + mh // 2),
                              (cxm + mw // 2 - 3, cym + int(hr * 0.25) + mh // 2), 1)
-            # bottom silhouette
+            # 底部轮廓
             pygame.draw.arc(self.screen, COLOR_DARK,
                             (cxm - hr, cym - hr, hr * 2, int(hr * 1.9)),
                             0, math.pi, 2)
-        # online dot + name
+        # 在线点 + 名字
         pygame.draw.circle(self.screen, COLOR_GREEN if online else COLOR_RED,
                            (x + size - 12, y + 12), 5)
         ns = self.font_small.render(name, True, COLOR_TEXT)
         self.screen.blit(ns, (x + size // 2 - ns.get_width() // 2, y + size + 10))
 
-    # ---------- Log (terminal-style: full-line wrap + follow/scroll) ----------
+    # ---------- 日志（终端式：整行显示自动折行 + 跟随/滚动） ----------
     def draw_logs(self, x, y, logs, rows=5, pw=0):
         Lc = self.L
         pw = pw or (x and self.L.w - x - 30)
         if not logs:
             return
-        # wrap cache (rebuilt only when log changes, avoid per-frame recompute)
+        # 折行缓存（日志内容变化才重建，避免每帧重复计算）
         if state.log_wrap_key != id(logs):
             state.log_wrap_key = id(logs)
-            max_w = pw - 36          # text fills from left edge to panel right minus 20px
+            max_w = pw - 36          # 文字从左边铺到面板右缘留 20px
             half_w = self.font_mono.size("M")[0]
             full_w = self.font_mono.size("中")[0]
             flat = []
@@ -1358,17 +1358,17 @@ class CyberpunkRenderer:
             pygame.draw.line(self.screen, (16, 30, 44), (x + 10, ly + line_h - 2),
                              (x + 10, ly + line_h - 2))
         if scroll > 0:
-            ind = f"[↑{scroll}  {max_scroll - scroll + 1}/{max_scroll + 1}]  R/↓=latest"
+            ind = f"[↑{scroll}行  {max_scroll - scroll + 1}/{max_scroll + 1}]  R/↓=回最新"
             ic = COLOR_YELLOW
         else:
-            ind = "[LIVE] auto-follow  ↑/wheel=history"
+            ind = "[LIVE] 新日志自动跟随  ↑/滚轮=查看历史"
             ic = COLOR_GREEN
         s = self.font_tiny.render(ind, True, ic)
         self.screen.blit(s, (x + pw - 50 - s.get_width(), y + rows * line_h + 6))
 
-    # ---------- Mouse hover tooltip ----------
+    # ---------- 鼠标悬停提示框 ----------
     def draw_tooltip(self, lines, mx, my):
-        """Translucent rounded black box + white text with black edge, follows the mouse"""
+        """半透明黑底圆角框 + 白字黑边，跟随鼠标显示"""
         f = self.font_tiny
         heights = f.get_height()
         w = max(f.render(l, True, (255, 255, 255)).get_width() for l in lines) + 26
@@ -1387,7 +1387,7 @@ class CyberpunkRenderer:
             self.text_stroke(line, f, (255, 255, 255),
                              (x + 14, y + 9 + i * (heights + 6)), stroke=1)
 
-    # ---------- Global noise ----------
+    # ---------- 全局噪点 ----------
     def draw_noise(self):
         for _ in range(70):
             nx = random.randint(0, self.L.w)
@@ -1395,7 +1395,7 @@ class CyberpunkRenderer:
             c = random.choice([(255, 255, 255, 26), (0, 240, 255, 22), (255, 0, 127, 18)])
             self.screen.set_at((nx, ny), c)
 
-    # ---------- Moving scan beam ----------
+    # ---------- 移动扫描亮线 ----------
     def draw_scan_beam(self):
         y = int((time.time() * 90) % (self.L.h + 200)) - 100
         surf = pygame.Surface((self.L.w, 3), pygame.SRCALPHA)
@@ -1403,37 +1403,37 @@ class CyberpunkRenderer:
         self.screen.blit(surf, (0, y), special_flags=pygame.BLEND_RGBA_ADD)
 
 
-# ================= Main =================
+# ================= 主程序 =================
 def pick_sdl_driver():
-    """Pick a usable video driver when headless (returns diagnostics list)"""
+    """无图形会话时选择可用的视频驱动（返回诊断字符串列表）"""
     diag = []
     if os.environ.get('SDL_VIDEODRIVER'):
-        diag.append(f"SDL_VIDEODRIVER explicitly set: {os.environ['SDL_VIDEODRIVER']}")
+        diag.append(f"SDL_VIDEODRIVER 已显式指定: {os.environ['SDL_VIDEODRIVER']}")
         return diag
     if os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'):
-        diag.append("Graphical session detected, let SDL auto-pick the driver")
+        diag.append("检测到图形会话，交给 SDL 自动选择驱动")
         return diag
-    # no DISPLAY / Wayland: try kernel direct rendering
+    # 无 DISPLAY / Wayland：尝试内核直驱
     if sys.platform.startswith('linux') and os.path.exists('/dev/dri/card0'):
         os.environ["SDL_VIDEODRIVER"] = "kmsdrm"
-        diag.append("using kmsdrm (kernel DRM/KMS direct rendering, no desktop needed)")
-        diag.append("note: kmsdrm needs a local tty and /dev/dri access; SSH sessions usually cannot get DRM master")
+        diag.append("使用 kmsdrm（内核 DRM/KMS 直驱，无需图形桌面）")
+        diag.append("提示: kmsdrm 需要在本地 tty 运行并拥有 /dev/dri 权限，SSH 会话通常拿不到 DRM master")
     else:
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         os.environ["MC_WINDOWED"] = "1"
-        diag.append("no /dev/dri/card0, the server has no real display device")
-        diag.append("fell back to dummy driver (runs, S-key screenshots work, but nothing on screen)")
-        diag.append("want a real picture: ① HDMI monitor/real GPU; ② install Xvfb; ③ SDL_VIDEODRIVER=dummy for screenshots only")
+        diag.append("未检测到 /dev/dri/card0，服务器没有可用的真实显示设备")
+        diag.append("已用 dummy 驱动兜底（可运行、可 S 键截图，但屏幕上看不到画面）")
+        diag.append("想要真实画面：① 接 HDMI 显示器/GPU 真机运行；② 安装 Xvfb 虚拟显示；③ 用 SDL_VIDEODRIVER=dummy 仅预览截图")
     return diag
 
 
 def init_display():
-    """Init display, return (screen, W, H); on failure print diagnostics and fall back to dummy"""
+    """初始化显示，返回 (screen, W, H)；失败时打印诊断并用 dummy 兜底"""
     diag = pick_sdl_driver()
     for line in diag:
         print("[DIAG]", line)
 
-    # use dummy audio driver when headless to avoid ALSA spam
+    # 无音频设备（无头服务器）时用 dummy 音频驱动，避免 ALSA 刷屏报错
     if "SDL_AUDIODRIVER" not in os.environ:
         os.environ["SDL_AUDIODRIVER"] = "dummy"
 
@@ -1454,13 +1454,13 @@ def init_display():
         pygame.mouse.set_visible(False)
         return screen, W, H
     except pygame.error as e:
-        print(f"[ERROR] display init failed: {e}")
-        print("[DIAG] troubleshooting:")
-        print("  · ls -l /dev/dri/    → is card0 present (required for GPU direct rendering)")
-        print("  · groups              → is the user in the video group (else sudo usermod -aG video $USER)")
-        print("  · run on a local tty → kmsdrm needs DRM master, SSH sessions cannot get it")
-        print("  · no display device: HDMI / install Xvfb / SDL_VIDEODRIVER=dummy preview")
-        print("[DIAG] degraded to dummy driver (runs and screenshots, but no real picture)")
+        print(f"[ERROR] 显示初始化失败: {e}")
+        print("[DIAG] 排查步骤：")
+        print("  · ls -l /dev/dri/    → 是否存在 card0（GPU 直驱的前提）")
+        print("  · groups              → 当前用户是否在 video 组（不在则 sudo usermod -aG video $USER）")
+        print("  · 是否在本地 tty 运行 → kmsdrm 需要 DRM master，SSH 远程会话拿不到")
+        print("  · 无显示设备方案：接 HDMI 真机 / 装 Xvfb / SDL_VIDEODRIVER=dummy 预览")
+        print("[DIAG] 已降级为 dummy 驱动兜底（可运行、可 S 键截图，但无真实画面）")
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         os.environ["MC_WINDOWED"] = "1"
         screen = pygame.display.set_mode((CONFIG["width"], CONFIG["height"]))
@@ -1475,7 +1475,7 @@ def main():
     renderer.build_background_layers()
     clock = pygame.time.Clock()
 
-    # system boot time base
+    # 系统开机时间基准
     try:
         state.sys_boot = psutil.boot_time()
     except Exception:
@@ -1509,14 +1509,14 @@ def main():
                     with state.log_lock:
                         state.log_scroll = 0
             elif event.type == pygame.MOUSEWHEEL:
-                # wheel over log panel scrolls history (up=3 lines earlier, down=back to live)
+                # 鼠标停在日志面板内时，滚轮滚动历史（上滚=看更早 3 行，下滚=回最新）
                 p5r = layout.rect(960, 760, 792, 220)
                 if (p5r[0] <= mx <= p5r[0] + p5r[2]
                         and p5r[1] <= my <= p5r[1] + p5r[3]):
                     with state.log_lock:
                         state.log_scroll = max(0, state.log_scroll + event.y * 3)
 
-        # auto theme switch
+        # 主题自动切换
         if time.time() - last_theme_check > 5:
             auto_theme_check()
             last_theme_check = time.time()
@@ -1525,11 +1525,11 @@ def main():
         renderer.build_background_layers()
         renderer.draw_background()
 
-        # ---- title + status bar ----
-        renderer.draw_glitch_title("S E R V E R  M O N I T O R", layout.w // 2, 16, renderer.font_big)
+        # ---- 标题 + 状态条 ----
+        renderer.draw_glitch_title("服 务 器 监 控", layout.w // 2, 16, renderer.font_big)
         renderer.draw_status_bar()
 
-        # ---- panels (same layout as reference) ----
+        # ---- 面板（参考图同款布局） ----
         p1 = layout.rect(40, 100, 900, 520)
         p2 = layout.rect(40, 640, 900, 340)
         p3 = layout.rect(960, 100, 792, 330)
@@ -1543,14 +1543,14 @@ def main():
                             accent=COLOR_MAGENTA)
         renderer.draw_panel(*p5, "SYSTEM LOGS")
 
-        # ---- eight gauges (2 rows x 4 cols) ----
+        # ---- 八大仪表（2 行 x 4 列） ----
         with state.data_lock:
             stats_copy = dict(state.system_stats)
         labels = list(stats_copy.keys())
         accent_map = {
-            "CPU": COLOR_CYAN, "MEM": COLOR_CYAN, "DISK": COLOR_CYAN,
-            "NET↓": COLOR_GREEN, "TPS": COLOR_GREEN,
-            "ONLINE": COLOR_MAGENTA, "log": COLOR_YELLOW, "THREADS": COLOR_MAGENTA,
+            "CPU": COLOR_CYAN, "内存": COLOR_CYAN, "磁盘": COLOR_CYAN,
+            "网络↓": COLOR_GREEN, "TPS": COLOR_GREEN,
+            "在线": COLOR_MAGENTA, "日志": COLOR_YELLOW, "线程": COLOR_MAGENTA,
         }
         for i, label in enumerate(labels):
             row, col = i // 4, i % 4
@@ -1559,14 +1559,14 @@ def main():
             renderer.draw_ring_gauge(cx, cy, layout.r(58), pct, str(val), label,
                                      accent_map.get(label, COLOR_CYAN))
 
-        # ---- memory + TPS panel ----
+        # ---- 内存含量 + TPS 面板 ----
         renderer.draw_mem_tps_panel(*p2)
 
-        # ---- MC status panel ----
+        # ---- MC 状态面板 ----
         sx, sy = layout.xy(990, 135)
         renderer.draw_mc_status(sx, sy, p3[2])
 
-        # ---- player cards (2 rows x 4) ----
+        # ---- 玩家卡片（2 行 x 4） ----
         with state.data_lock:
             players_copy = list(state.player_list)
             avatars_copy = dict(state.avatars)
@@ -1589,25 +1589,25 @@ def main():
             renderer.text_stroke(tip_txt, renderer.font_med, (255, 225, 60),
                                  (tx, ty), stroke=2)
 
-        # ---- log ----
+        # ---- 日志 ----
         with state.log_lock:
             logs_copy = list(state.log_lines)
         lx, ly = layout.xy(975, 780)
         renderer.draw_logs(lx, ly, logs_copy, rows=5, pw=p5[2])
 
-        # ---- mouse: hover gauge/player card → tooltip ----
+        # ---- 鼠标交互：悬停仪表/玩家卡 → 信息提示 ----
         hover_tip = None
         for i, label in enumerate(labels):
             row, col = i // 4, i % 4
             gcx, gcy = layout.xy(40 + 70 + col * 215, 100 + 140 + row * 210)
             if (mx - gcx) ** 2 + (my - gcy) ** 2 <= (layout.r(58) + 12) ** 2:
                 val, pct = stats_copy.get(label, ("--", 0))
-                unit = "" if label in ("ONLINE", "THREADS", "log") else (
-                    "G" if label in ("MEM", "DISK") else (
-                        "MB/s" if label == "NET↓" else (
+                unit = "" if label in ("在线", "线程", "日志") else (
+                    "G" if label in ("内存", "磁盘") else (
+                        "MB/s" if label == "网络↓" else (
                             "TPS" if label == "TPS" else "%")))
                 hover_tip = [f"{label}  {val} {unit}".strip(),
-                             f"LOAD {pct:.0f}%"]
+                             f"负载 {pct:.0f}%"]
                 break
         if hover_tip is None and players_copy:
             for i, pname in enumerate(players_copy[:8]):
@@ -1615,18 +1615,18 @@ def main():
                 ax2, ay2 = layout.xy(990 + col * 178, 480 + row * 128)
                 if (ax2 <= mx <= ax2 + layout.r(100)
                         and ay2 <= my <= ay2 + layout.r(100)):
-                    hover_tip = [f"PLAYER: {pname}", "ONLINE"]
+                    hover_tip = [f"玩家: {pname}", "ONLINE"]
                     break
         if hover_tip:
             renderer.draw_tooltip(hover_tip, mx, my)
 
-        # ---- effects overlay ----
+        # ---- 特效叠加 ----
         renderer.draw_scan_beam()
         renderer.draw_noise()
 
-        # ---- demo watermark (honest label, never mistaken for real data) ----
+        # ---- 演示模式水印（诚实标注，避免被误认为真实数据） ----
         if state.demo:
-            wm = renderer.font_small.render("DEMO SIMULATION · FAKE DATA PREVIEW",
+            wm = renderer.font_small.render("DEMO SIMULATION · 模拟数据预览",
                                             True, COLOR_YELLOW)
             wx0 = layout.w - wm.get_width() - 24
             wy0 = layout.h - wm.get_height() - 18
@@ -1635,7 +1635,7 @@ def main():
             pygame.draw.line(renderer.screen, (*COLOR_YELLOW, 80),
                              (wx0 - 8, wy0 + 12), (wx0 + wm.get_width() + 8, wy0 + 12), 1)
             renderer.screen.blit(wm, (wx0, wy0))
-            # large translucent centered DEMO watermark
+            # 中央大号半透明 DEMO 水印
             big_wm = renderer.font_big.render("D E M O", True, (255, 200, 0))
             wms = pygame.Surface(big_wm.get_size(), pygame.SRCALPHA)
             wms.blit(big_wm, (0, 0))
@@ -1643,7 +1643,7 @@ def main():
             renderer.screen.blit(wms, (layout.w // 2 - big_wm.get_width() // 2,
                                        int(layout.h * 0.82)))
 
-        # ---- mouse crosshair ----
+        # ---- 鼠标准星 ----
         pygame.draw.aaline(renderer.screen, COLOR_CYAN, (mx - 16, my), (mx + 16, my))
         pygame.draw.aaline(renderer.screen, COLOR_CYAN, (mx, my - 16), (mx, my + 16))
         pygame.draw.circle(renderer.screen, COLOR_MAGENTA, (mx, my), 6, 1)
