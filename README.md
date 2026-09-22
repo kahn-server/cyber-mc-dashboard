@@ -2,7 +2,7 @@
 
 > A cyberpunk-styled **Minecraft server monitoring terminal** — fullscreen neon HUD rendered in Python/pygame, with real RCON data, CRT scanlines and live log feed.
 
-**English** | [简体中文](README_cn.md)
+**English** | [Chinese](README_cn.md)
 
 ![Type](https://img.shields.io/badge/type-monitor-dashboard-ff2d95)
 ![Python](https://img.shields.io/badge/python-3.8+-00d4ff)
@@ -33,9 +33,9 @@
 ```
 .
 ├── dashboard.py          # Main program (English version)
-├── dashboard_cn.py       # Main program (中文版，见 README_cn.md)
+├── dashboard_cn.py       # Main program (Chinese version, see README_cn.md)
 ├── dashboard.sh          # Start/stop script, launches dashboard.py (English)
-├── dashboard_cn.sh       # Start/stop script for 中文版 (launches dashboard_cn.py)
+├── dashboard_cn.sh       # Start/stop script for Chinese version (launches dashboard_cn.py)
 ├── config.example.json   # Config template (copy to config.json)
 ├── config.json           # Your real config (contains password — do NOT commit to a public repo)
 └── shots/                # Screenshot output (runtime)
