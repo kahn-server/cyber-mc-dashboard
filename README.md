@@ -23,11 +23,19 @@
 ├── dashboard.py          # 主程序（单文件）
 ├── dashboard.sh          # 启动/停止脚本（start|stop）
 ├── config.example.json   # 配置模板（复制为 config.json 使用）
-├── config.json           # 你的实际配置（含密码，已被 .gitignore 排除，勿提交）
+├── config.json           # 你的实际配置（含密码，请勿提交到公开仓库）
 └── shots/                # 截图输出目录（运行时生成）
 ```
 
 ## 安装
+
+**系统依赖（APT）**——无显示器环境需要虚拟屏与 VNC 转发（`dashboard.sh` 依赖）：
+
+```bash
+sudo apt-get install -y xvfb x11vnc python3 python3-pip
+```
+
+**Python 依赖**：
 
 ```bash
 pip install pygame psutil requests
@@ -86,7 +94,7 @@ MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
 ./dashboard.sh stop      # 停止
 ```
 
-> 启动脚本顶部的 `DASH_DIR / PANEL_DIR / VNC_PASS / WEBSOCKIFY` 等变量按你的环境修改后再用。
+> 启动脚本自动检测 CPU 核心数分配亲和（`DASH_CPU_AFFINITY` 可覆盖），自动探测 websockify；`DASH_DIR / PANEL_DIR / DASH_VNC_PASS / WEBSOCKIFY_BIN / DISPLAY_NUM` 等均可用环境变量覆盖，无需改脚本。
 
 ## 快捷键
 

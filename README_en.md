@@ -23,11 +23,19 @@ A cyberpunk-styled Minecraft server monitoring terminal (Python / pygame fullscr
 ├── dashboard.py          # Main program (single file)
 ├── dashboard.sh          # Start/stop script (start|stop)
 ├── config.example.json   # Config template (copy to config.json)
-├── config.json           # Your real config (contains password, git-ignored — never commit)
+├── config.json           # Your real config (contains password — do NOT commit to a public repo)
 └── shots/                # Screenshot output (runtime)
 ```
 
 ## Installation
+
+**System dependencies (APT)** — headless boxes need a virtual display and VNC forwarding (`dashboard.sh` relies on them):
+
+```bash
+sudo apt-get install -y xvfb x11vnc python3 python3-pip
+```
+
+**Python dependencies**:
 
 ```bash
 pip install pygame psutil requests
@@ -86,7 +94,7 @@ MC_WINDOWED=1 MC_WIDTH=1792 MC_HEIGHT=1024 python3 dashboard.py
 ./dashboard.sh stop      # stop
 ```
 
-> Edit the variables at the top of `dashboard.sh` (`DASH_DIR / PANEL_DIR / VNC_PASS / WEBSOCKIFY`, etc.) to match your environment before use.
+> The start script auto-detects CPU core count for affinity (`DASH_CPU_AFFINITY` overrides it) and auto-probes websockify; `DASH_DIR / PANEL_DIR / DASH_VNC_PASS / WEBSOCKIFY_BIN / DISPLAY_NUM` are all overridable via environment variables — no script editing needed.
 
 ## Hotkeys
 
