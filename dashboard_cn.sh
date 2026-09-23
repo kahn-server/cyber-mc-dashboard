@@ -12,7 +12,9 @@
 #   WEBSOCKIFY_BIN      websockify 可执行文件路径（默认自动探测）
 #   DASH_PY             python 可执行文件（默认优先 \$DASH_DIR/venv/bin/python，否则 python3）
 # =====================================================================
-DASH_DIR="${DASH_DIR:-$HOME/.dashboard}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# DASH_DIR 默认取脚本所在目录（解压即用）；可用 DASH_DIR=... 覆盖
+DASH_DIR="${DASH_DIR:-$SCRIPT_DIR}"
 PANEL_DIR="${PANEL_DIR:-$HOME/.mc_panel}"
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 VNC_PORT=5900
@@ -63,6 +65,10 @@ start() {
     rm -f "/tmp/.X${DISPLAY_NUM#:}-lock" "/tmp/.X11-unix/X${DISPLAY_NUM#:}"
     nohup Xvfb "$DISPLAY_NUM" -screen 0 1920x1080x24 -ac > "$DASH_DIR/xvfb.log" 2>&1 &
     sleep 2
+    if [ ! -f "$DASH_DIR/dashboard_cn.py" ]; then
+        echo "[!] $DASH_DIR 下未找到 dashboard_cn.py。请将项目文件放入该目录（或解压到本脚本所在目录）。"
+        exit 1
+    fi
     echo "[*] 2/4 面板 (CPU ${CPU_AFFINITY})..."
     cd "$DASH_DIR"
     DISPLAY="$DISPLAY_NUM" nohup taskset -c "$CPU_AFFINITY" "$DASH_PYTHON" -u dashboard_cn.py > "$DASH_DIR/dash.log" 2>&1 &
