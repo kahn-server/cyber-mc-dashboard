@@ -46,11 +46,11 @@ sudo apt-get install -y xvfb x11vnc python3 python3-pip
 **建议使用虚拟环境——新版 Python 系统上为必须**（Debian 12+/Ubuntu 23.10+ 等 PEP 668 会拒绝全局安装）：
 
 ```bash
-python3 -m venv ~/.dashboard/venv
-~/.dashboard/venv/bin/pip install pygame psutil requests websockify
+python3 -m venv venv
+venv/bin/pip install pygame psutil requests websockify
 ```
 
-`dashboard.sh` 会自动探测 `~/.dashboard/venv/bin/python` 和 venv 内的 `websockify`，无需额外参数。
+`dashboard.sh` 运行的是**本脚本所在目录**下的文件（解压到任意位置，`./dashboard.sh start` 直接可用），会自动探测同目录 `venv/bin/python` 与 `venv/bin/websockify`，无需额外参数。
 
 旧版系统上也可以直接安装：
 
