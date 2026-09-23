@@ -43,8 +43,19 @@ sudo apt-get install -y xvfb x11vnc python3 python3-pip
 
 **Python 依赖**：
 
+**建议使用虚拟环境——新版 Python 系统上为必须**（Debian 12+/Ubuntu 23.10+ 等 PEP 668 会拒绝全局安装）：
+
 ```bash
-pip install pygame psutil requests
+python3 -m venv ~/.dashboard/venv
+~/.dashboard/venv/bin/pip install pygame psutil requests websockify
+```
+
+`dashboard.sh` 会自动探测 `~/.dashboard/venv/bin/python` 和 venv 内的 `websockify`，无需额外参数。
+
+旧版系统上也可以直接安装：
+
+```bash
+pip install --user pygame psutil requests websockify
 ```
 
 > 不需要 mcrcon：项目内置纯 socket 实现的 `RCONClient`（部分发行版 mcrcon 用 `signal.alarm` 实现超时，在子线程会抛异常，故自研）。
