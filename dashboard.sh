@@ -12,7 +12,9 @@
 #   WEBSOCKIFY_BIN      websockify binary path (default: auto-probed)
 #   DASH_PY             python binary (default: \$DASH_DIR/venv/bin/python if exists, else python3)
 # =====================================================================
-DASH_DIR="${DASH_DIR:-$HOME/.dashboard}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# DASH_DIR defaults to the script's own directory (unzip-and-run); override with DASH_DIR=...
+DASH_DIR="${DASH_DIR:-$SCRIPT_DIR}"
 PANEL_DIR="${PANEL_DIR:-$HOME/.mc_panel}"
 DISPLAY_NUM="${DISPLAY_NUM:-:1}"
 VNC_PORT=5900
@@ -63,6 +65,10 @@ start() {
     rm -f "/tmp/.X${DISPLAY_NUM#:}-lock" "/tmp/.X11-unix/X${DISPLAY_NUM#:}"
     nohup Xvfb "$DISPLAY_NUM" -screen 0 1920x1080x24 -ac > "$DASH_DIR/xvfb.log" 2>&1 &
     sleep 2
+    if [ ! -f "$DASH_DIR/dashboard.py" ]; then
+        echo "[!] dashboard.py not found in $DASH_DIR. Put the project files there (or unzip next to this script)."
+        exit 1
+    fi
     echo "[*] 2/4 dashboard (CPU ${CPU_AFFINITY})..."
     cd "$DASH_DIR"
     DISPLAY="$DISPLAY_NUM" nohup taskset -c "$CPU_AFFINITY" "$DASH_PYTHON" -u dashboard.py > "$DASH_DIR/dash.log" 2>&1 &
