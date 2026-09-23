@@ -10,6 +10,7 @@
 #   DASH_CPU_AFFINITY   CPU 亲和核心（默认自动取末两位核心，1 核则 0）
 #   DASH_VNC_PASS       VNC 密码（默认 123456，建议修改）
 #   WEBSOCKIFY_BIN      websockify 可执行文件路径（默认自动探测）
+#   DASH_PY             python 可执行文件（默认优先 \$DASH_DIR/venv/bin/python，否则 python3）
 # =====================================================================
 DASH_DIR="${DASH_DIR:-$HOME/.dashboard}"
 PANEL_DIR="${PANEL_DIR:-$HOME/.mc_panel}"
@@ -18,17 +19,29 @@ VNC_PORT=5900
 WS_PORT=6080
 VNC_PASS="${DASH_VNC_PASS:-123456}"
 
-# websockify 路径探测：环境变量 > $HOME/.local/bin > PATH
+# websockify 路径探测：环境变量 > venv > $HOME/.local/bin > PATH
 if [ -n "$WEBSOCKIFY_BIN" ]; then
     WEBSOCKIFY="$WEBSOCKIFY_BIN"
+elif [ -x "$DASH_DIR/venv/bin/websockify" ]; then
+    WEBSOCKIFY="$DASH_DIR/venv/bin/websockify"
 elif [ -x "$HOME/.local/bin/websockify" ]; then
     WEBSOCKIFY="$HOME/.local/bin/websockify"
 else
     WEBSOCKIFY="$(command -v websockify 2>/dev/null || echo '')"
 fi
 if [ -z "$WEBSOCKIFY" ]; then
-    echo "[!] 未找到 websockify，请先执行: pip install websockify"
+    echo "[!] 未找到 websockify。请创建虚拟环境并安装（见 README）："
+    echo "    python3 -m venv \$HOME/.dashboard/venv && \$HOME/.dashboard/venv/bin/pip install websockify"
     exit 1
+fi
+
+# python 路径探测：DASH_PY > \$DASH_DIR/venv/bin/python（虚拟环境）> python3
+if [ -n "$DASH_PY" ]; then
+    DASH_PYTHON="$DASH_PY"
+elif [ -x "$DASH_DIR/venv/bin/python" ]; then
+    DASH_PYTHON="$DASH_DIR/venv/bin/python"
+else
+    DASH_PYTHON="$(command -v python3 2>/dev/null || echo python3)"
 fi
 
 # CPU 亲和：自动取末两位核心（MC 服务占用前部核心），可用 DASH_CPU_AFFINITY 覆盖
@@ -52,7 +65,7 @@ start() {
     sleep 2
     echo "[*] 2/4 面板 (CPU ${CPU_AFFINITY})..."
     cd "$DASH_DIR"
-    DISPLAY="$DISPLAY_NUM" nohup taskset -c "$CPU_AFFINITY" python3 -u dashboard_cn.py > "$DASH_DIR/dash.log" 2>&1 &
+    DISPLAY="$DISPLAY_NUM" nohup taskset -c "$CPU_AFFINITY" "$DASH_PYTHON" -u dashboard_cn.py > "$DASH_DIR/dash.log" 2>&1 &
     sleep 5
     echo "[*] 3/4 x11vnc..."
     nohup x11vnc -display "$DISPLAY_NUM" -localhost -rfbport "$VNC_PORT" -forever -shared -passwd "$VNC_PASS" -o "$DASH_DIR/x11vnc.log" > /dev/null 2>&1 &
