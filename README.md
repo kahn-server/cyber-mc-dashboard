@@ -53,8 +53,19 @@ sudo apt-get install -y xvfb x11vnc python3 python3-pip
 
 **Python dependencies**:
 
+A virtual environment is **recommended — and required on newer Python releases** (PEP 668 blocks global installs on Debian 12+ / Ubuntu 23.10+):
+
 ```bash
-pip install pygame psutil requests
+python3 -m venv ~/.dashboard/venv
+~/.dashboard/venv/bin/pip install pygame psutil requests websockify
+```
+
+`dashboard.sh` auto-detects `~/.dashboard/venv/bin/python` and the venv's `websockify`, so no extra flags are needed.
+
+On older systems the plain install still works:
+
+```bash
+pip install --user pygame psutil requests websockify
 ```
 
 > No mcrcon needed: the project ships a pure-socket `RCONClient` (some mcrcon builds use `signal.alarm` for timeouts, which throws in worker threads, hence the custom client).
